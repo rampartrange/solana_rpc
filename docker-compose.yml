@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: solana_rpc
+    depends_on:
+      - mongodb
+      - websocket_server
+    environment:
+      - MONGO_URI=${MONGO_URI}
+      - MONGO_DB=${MONGO_DB}
+      - MAX_QUEUE_SIZE=${MAX_QUEUE_SIZE}
+      - WEBSOCKET_URI=${WEBSOCKET_URI}
+    ports:
+      - "8080:8080"
+    networks:
+      - solana_rpc
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - solana_rpc
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - solana_rpc
+
+  websocket_server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.websocket_server
+    container_name: websocket_server
+    ports:
+      - "8001:9000"
+    networks:
+      - solana_rpc
+
+
+  mongodb:
+    image: mongo:latest
+    volumes:
+      - ./mongodata:/data/db
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    networks:
+      - solana_rpc
+    container_name: mongodb
+
+networks:
+  solana_rpc:
+    name: solana_rpc
